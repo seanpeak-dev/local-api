@@ -59,12 +59,13 @@ const messagesRoute = [{
 }, {
     method: "delete",
     route: '/messages/:id',
-    handler: ({body, params: {id}}, res) => {
+    // params로 보내는 데 서버에서 받을 때는 query로 받아야 한다.
+    handler: ({query: {userId}, params: {id}}, res) => {
         try {
             const msgs = getMsgs()
             const targetIdx = msgs.findIndex(msg => msg.id === id);
             if (targetIdx < 0) throw new Error('해당 메시지가 없습니다.')
-            if (msgs[targetIdx].userId !== body.userId) throw new Error('사용자가 다릅니다.')
+            if (msgs[targetIdx].userId !== userId) throw new Error('사용자가 다릅니다.')
             msgs.splice(targetIdx, 1)
             setMsgs(msgs)
             res.send(id)
