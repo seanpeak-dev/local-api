@@ -7,9 +7,10 @@ const setMsgs = (data) => writeDB('messages', data);
 const messagesRoute = [{
     method: "get",
     route: '/messages',
-    handler: (req, res) => {
+    handler: ({ query: { cursor = ''}}, res) => {
         const msgs = getMsgs();
-        res.send(msgs);
+        const fromIdx = msgs.findIndex((msg) => msg.id === cursor) + 1;
+        res.send(msgs.slice(fromIdx, fromIdx + 10));
     }
 }, {
     method: "get",
