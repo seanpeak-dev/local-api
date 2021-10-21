@@ -1,8 +1,9 @@
 import MsgItem from "./MsgItem";
 import MsgInput from "./MsgInput";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import fetcher from '../fetcher.js'
 import {useRouter} from "next/router";
+import useInfiniteScroll from "../hooks/useInfiniteScroll";
 
 const UserIds = ["sean", "moon"];
 const getRandomUserId = () => UserIds[Math.round(Math.random())];
@@ -18,10 +19,13 @@ const getRandomUserId = () => UserIds[Math.round(Math.random())];
 
 // console.log(JSON.stringify(originalMsgs));
 
-const MsgList = () => {
-    const [msgs, setMsgs] = useState([]);
+const MsgList = ({ serverMsgs, users }) => {
+    const [msgs, setMsgs] = useState(serverMsgs);
     const [editingId, setEditingId] = useState(null);
     const {query: {userId = ''}} = useRouter()
+    const fetchMoreEl = useRef(null)
+    const intersecting = useInfiniteScroll(fetchMoreEl)
+    const [hasNext, setHasNext] = useState(true);
 
     const onCreate = async (text) => {
         const newMsg = await fetcher('post', '/messages', {text, userId})
@@ -66,12 +70,17 @@ const MsgList = () => {
     };
 
     const getMsgs = async () => {
-        const msgs = await fetcher('get', '/messages')
-        setMsgs(msgs)
+        const newMsgs = await fetcher('get', '/messages', {params: {cursor: msgs[msgs.length - 1]?.id || ''}})
+        if(newMsgs.length === 0) {
+            setHasNext(false)
+            return
+        }
+        setMsgs(msgs => [...msgs, ...newMsgs])
     }
+
     useEffect(() => {
-        getMsgs()
-    }, [])
+        if (intersecting && hasNext) getMsgs()
+    }, [intersecting])
 
 
     return (
@@ -87,9 +96,11 @@ const MsgList = () => {
                         isEditing={editingId === x.id}
                         onDelete={() => onDelete(x.id)}
                         myId={userId}
+                        user={users[x.userId]}
                     />
                 ))}
             </ul>
+            <div ref={fetchMoreEl} />
         </>
     );
 };
